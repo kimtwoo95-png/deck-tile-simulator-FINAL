@@ -8,7 +8,7 @@ import { useState } from "react";
 type ProductType = "buddy" | "dot";
 type BuddyColor = "ivory" | "lightgray" | "beige" | "butter";
 
-/** 도트 색상 → 버디와 동일한 4색 */
+/** 🔥 도트 색상: 4색만 유지 */
 type DotColorKey = "ivory" | "lightgray" | "beige" | "butter";
 type DotPattern = "AAAA" | "ABBA" | "ABBC";
 
@@ -23,7 +23,7 @@ const buddyColorOptions: { key: BuddyColor; label: string; color: string }[] = [
 ];
 
 /* --------------------------------------------
-   도트 색상 (4색)
+   도트 색상 (🔥 6 → 4)
 -------------------------------------------- */
 const dotColorOptions: { key: DotColorKey; label: string; color: string }[] = [
   { key: "ivory", label: "아이보리", color: "#FDF8EE" },
@@ -33,7 +33,7 @@ const dotColorOptions: { key: DotColorKey; label: string; color: string }[] = [
 ];
 
 /* --------------------------------------------
-   도트 패턴
+   도트 패턴 (2×2)
 -------------------------------------------- */
 const dotPatternCells: Record<DotPattern, ("A" | "B" | "C")[]> = {
   AAAA: ["A", "A", "A", "A"],
@@ -42,11 +42,12 @@ const dotPatternCells: Record<DotPattern, ("A" | "B" | "C")[]> = {
 };
 
 /* --------------------------------------------
-   박스 계산
+   박스 계산 함수
 -------------------------------------------- */
 function calcPacks(totalNeeded: number, packSizes: number[]) {
   const sorted = [...packSizes].sort((a, b) => b - a);
   const smallest = sorted[sorted.length - 1];
+
   const packCounts: Record<number, number> = {};
   let remaining = totalNeeded;
 
@@ -109,55 +110,163 @@ export default function Page() {
     dotColorOptions.map((c) => [c.key, c.color])
   ) as Record<DotColorKey, string>;
 
-  const getDotColor = (s: "A" | "B" | "C") =>
-    s === "A" ? colorMap[dotColorA] : s === "B" ? colorMap[dotColorB] : colorMap[dotColorC];
+  const getDotColor = (symbol: "A" | "B" | "C") =>
+    symbol === "A"
+      ? colorMap[dotColorA]
+      : symbol === "B"
+      ? colorMap[dotColorB]
+      : colorMap[dotColorC];
 
   return (
     <div className="min-h-screen bg-white px-4 py-6 text-slate-900">
       <div className="max-w-6xl mx-auto space-y-8">
-        <h1 className="text-3xl font-black text-emerald-700">ALIVES 타일 계산기</h1>
+        <h1 className="text-3xl font-black tracking-tight text-emerald-700">
+          ALIVES 타일 계산기
+        </h1>
 
-        {/* 1. 타입 선택 */}
+        {/* 1. 데크타일 선택 */}
         <section className="border rounded-xl p-5">
           <div className="grid grid-cols-2 gap-4">
-            <button onClick={() => setProductType("buddy")}>버디</button>
-            <button onClick={() => setProductType("dot")}>도트</button>
+            <button
+              onClick={() => setProductType("buddy")}
+              className={`border rounded-xl p-4 ${
+                productType === "buddy"
+                  ? "border-emerald-500 bg-emerald-50"
+                  : "border-slate-300"
+              }`}
+            >
+              버디
+            </button>
+            <button
+              onClick={() => setProductType("dot")}
+              className={`border rounded-xl p-4 ${
+                productType === "dot"
+                  ? "border-emerald-500 bg-emerald-50"
+                  : "border-slate-300"
+              }`}
+            >
+              도트
+            </button>
           </div>
         </section>
 
-        {/* 2. 입력 */}
-        <section className="border rounded-xl p-5 grid md:grid-cols-2 gap-6">
-          <div>
-            <input value={widthCm} onChange={e => setWidthCm(+e.target.value)} />
-            <input value={heightCm} onChange={e => setHeightCm(+e.target.value)} />
+        {/* 2. 사이즈 입력 */}
+        <section className="border rounded-xl p-5">
+          <div className="flex gap-3">
+            <input
+              type="number"
+              value={widthCm}
+              onChange={(e) => setWidthCm(Number(e.target.value))}
+              className="border px-3 py-2 rounded w-full"
+            />
+            <input
+              type="number"
+              value={heightCm}
+              onChange={(e) => setHeightCm(Number(e.target.value))}
+              className="border px-3 py-2 rounded w-full"
+            />
+          </div>
+        </section>
+
+        {/* 3. 옵션 + 미리보기 */}
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* 옵션 */}
+          <div className="space-y-4">
+            {productType === "buddy" &&
+              buddyColorOptions.map((c) => (
+                <button
+                  key={c.key}
+                  onClick={() => setBuddyColor(c.key)}
+                  className="flex gap-2 items-center border p-2 rounded"
+                >
+                  <div
+                    className="w-6 h-6 border"
+                    style={{ backgroundColor: c.color }}
+                  />
+                  {c.label}
+                </button>
+              ))}
+
+            {productType === "dot" &&
+              dotColorOptions.map((c) => (
+                <button
+                  key={c.key}
+                  onClick={() => setDotColorA(c.key)}
+                  className="flex gap-2 items-center border p-2 rounded"
+                >
+                  <div
+                    className="w-6 h-6 border"
+                    style={{ backgroundColor: c.color }}
+                  />
+                  {c.label}
+                </button>
+              ))}
           </div>
 
           {/* 미리보기 */}
-          <div>
+          <div className="border p-3 overflow-auto">
+            {productType === "buddy" && (
+              <div
+                className="grid"
+                style={{
+                  gridTemplateColumns: `repeat(${previewBuddyX}, 20px)`,
+                }}
+              >
+                {Array.from({ length: previewBuddyX * previewBuddyY }).map(
+                  (_, i) => (
+                    <div
+                      key={i}
+                      className="border"
+                      style={{
+                        backgroundColor:
+                          buddyColorOptions.find(
+                            (b) => b.key === buddyColor
+                          )?.color,
+                      }}
+                    />
+                  )
+                )}
+              </div>
+            )}
+
             {productType === "dot" && (
               <div
-                className="inline-grid"
+                className="grid"
                 style={{
                   gridTemplateColumns: `repeat(${previewDotX}, 10px)`,
                 }}
               >
-                {Array.from({ length: previewDotX * previewDotY }).map((_, i) => {
-                  const symbol =
-                    dotPatternCells[dotPattern][((Math.floor(i / previewDotX) % 2) * 2 + (i % 2))];
-                  return (
-                    <div
-                      key={i}
-                      style={{ width: 10, height: 10, backgroundColor: getDotColor(symbol) }}
-                    />
-                  );
-                })}
+                {Array.from({ length: previewDotX * previewDotY }).map(
+                  (_, i) => {
+                    const x = i % previewDotX;
+                    const y = Math.floor(i / previewDotX);
+                    const idx = (y % 2) * 2 + (x % 2);
+                    const symbol = dotPatternCells[dotPattern][idx];
+                    return (
+                      <div
+                        key={i}
+                        className="border"
+                        style={{ backgroundColor: getDotColor(symbol) }}
+                      />
+                    );
+                  }
+                )}
               </div>
             )}
           </div>
         </section>
 
-        {/* 결과 */}
+        {/* 4. 결과 */}
         <section className="border rounded-xl p-5">
+          {productType === "buddy" && (
+            <>
+              <div>필요 수량: {buddyNeeded}</div>
+              <div>36p: {buddyPack.packCounts[36] || 0}</div>
+              <div>9p: {buddyPack.packCounts[9] || 0}</div>
+              <div>2p: {buddyPack.packCounts[2] || 0}</div>
+            </>
+          )}
+
           {productType === "dot" && (
             <>
               <div>필요 수량: {dotNeeded}</div>
