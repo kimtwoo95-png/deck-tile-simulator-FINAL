@@ -2,178 +2,202 @@
 
 import { useState } from "react";
 
-/* =====================
+/* --------------------------------------------
    타입 정의
-===================== */
+-------------------------------------------- */
 type ProductType = "buddy" | "dot";
+
 type TileColor = "ivory" | "lightgray" | "beige" | "butter";
+
 type DotPattern = "AAAA" | "ABBA" | "ABBC";
 
-/* =====================
-   공통 색상 (버디 = 도트)
-===================== */
-const TILE_COLORS: { key: TileColor; label: string; color: string }[] = [
+/* --------------------------------------------
+   공통 색상 (버디 + 도트 공용)
+-------------------------------------------- */
+const colorOptions: { key: TileColor; label: string; color: string }[] = [
   { key: "ivory", label: "아이보리", color: "#FDF8EE" },
   { key: "lightgray", label: "라이트그레이", color: "#D4D4D8" },
   { key: "beige", label: "베이지", color: "#EBD9B4" },
   { key: "butter", label: "버터", color: "#FFE9A7" },
 ];
 
-/* =====================
+/* --------------------------------------------
    도트 패턴 (2×2)
-===================== */
-const DOT_PATTERN_MAP: Record<DotPattern, ("A" | "B" | "C")[]> = {
+-------------------------------------------- */
+const dotPatternCells: Record<DotPattern, ("A" | "B" | "C")[]> = {
   AAAA: ["A", "A", "A", "A"],
   ABBA: ["A", "B", "B", "A"],
   ABBC: ["A", "B", "B", "C"],
 };
 
-/* =====================
+/* --------------------------------------------
    박스 계산
-===================== */
-function calcPacks(total: number, sizesDesc: number[]) {
-  const sizes = [...sizesDesc].sort((a, b) => b - a);
-  let remain = total;
-  const counts: Record<number, number> = {};
+-------------------------------------------- */
+function calcPacks(totalNeeded: number, packSizes: number[]) {
+  const sorted = [...packSizes].sort((a, b) => b - a);
+  const smallest = sorted[sorted.length - 1];
 
-  for (const s of sizes) {
-    counts[s] = Math.floor(remain / s);
-    remain -= counts[s] * s;
+  const packCounts: Record<number, number> = {};
+  let remaining = totalNeeded;
+
+  for (const size of sorted) {
+    const count = Math.floor(remaining / size);
+    packCounts[size] = count;
+    remaining -= count * size;
   }
 
-  if (remain > 0) counts[sizes[sizes.length - 1]] += 1;
+  if (remaining > 0) {
+    packCounts[smallest] = (packCounts[smallest] || 0) + 1;
+  }
 
-  const totalPieces = sizes.reduce(
-    (sum, s) => sum + s * (counts[s] || 0),
+  const totalPieces = sorted.reduce(
+    (sum, size) => sum + size * (packCounts[size] || 0),
     0
   );
 
-  return { counts, totalPieces, leftover: totalPieces - total };
+  return { packCounts, totalPieces, leftover: totalPieces - totalNeeded };
 }
 
-/* =====================
+/* --------------------------------------------
    메인 컴포넌트
-===================== */
+-------------------------------------------- */
 export default function Page() {
-  const [product, setProduct] = useState<ProductType>("buddy");
+  const [productType, setProductType] = useState<ProductType>("buddy");
 
   const [widthCm, setWidthCm] = useState(300);
   const [heightCm, setHeightCm] = useState(300);
 
-  // 버디
+  // 버디 색상
   const [buddyColor, setBuddyColor] = useState<TileColor>("ivory");
 
-  // 도트
+  // 도트 옵션
   const [dotPattern, setDotPattern] = useState<DotPattern>("AAAA");
-  const [dotA, setDotA] = useState<TileColor>("ivory");
-  const [dotB, setDotB] = useState<TileColor>("beige");
-  const [dotC, setDotC] = useState<TileColor>("butter");
+  const [dotColorA, setDotColorA] = useState<TileColor>("ivory");
+  const [dotColorB, setDotColorB] = useState<TileColor>("lightgray");
+  const [dotColorC, setDotColorC] = useState<TileColor>("beige");
 
-  /* =====================
+  const maxPreviewTiles = 40;
+
+  /* --------------------------------------------
      계산
-  ===================== */
+  -------------------------------------------- */
   const buddyX = Math.ceil(widthCm / 30);
   const buddyY = Math.ceil(heightCm / 30);
-  const buddyNeed = buddyX * buddyY;
-  const buddyPack = calcPacks(buddyNeed, [36, 9, 2]);
+  const buddyNeeded = buddyX * buddyY;
+  const buddyPack = calcPacks(buddyNeeded, [36, 9, 2]);
 
   const dotX = Math.ceil(widthCm / 10);
   const dotY = Math.ceil(heightCm / 10);
-  const dotNeed = dotX * dotY;
-  const dotPack = calcPacks(dotNeed, [120, 40]);
+  const dotNeeded = dotX * dotY;
+  const dotPack = calcPacks(dotNeeded, [120, 40]);
+
+  const previewBuddyX = Math.min(buddyX, maxPreviewTiles);
+  const previewBuddyY = Math.min(buddyY, maxPreviewTiles);
+  const previewDotX = Math.min(dotX, maxPreviewTiles);
+  const previewDotY = Math.min(dotY, maxPreviewTiles);
 
   const colorMap: Record<TileColor, string> = Object.fromEntries(
-    TILE_COLORS.map((c) => [c.key, c.color])
+    colorOptions.map((c) => [c.key, c.color])
   ) as Record<TileColor, string>;
 
-  const getDotColor = (s: "A" | "B" | "C") =>
-    s === "A" ? colorMap[dotA] : s === "B" ? colorMap[dotB] : colorMap[dotC];
+  const getDotColor = (symbol: "A" | "B" | "C") =>
+    symbol === "A"
+      ? colorMap[dotColorA]
+      : symbol === "B"
+      ? colorMap[dotColorB]
+      : colorMap[dotColorC];
 
-  const PREVIEW_MAX = 40;
-  const pxBuddyX = Math.min(buddyX, PREVIEW_MAX);
-  const pxBuddyY = Math.min(buddyY, PREVIEW_MAX);
-  const pxDotX = Math.min(dotX, PREVIEW_MAX);
-  const pxDotY = Math.min(dotY, PREVIEW_MAX);
-
-  /* =====================
-     렌더
-  ===================== */
+  /* --------------------------------------------
+     UI
+  -------------------------------------------- */
   return (
-    <div className="min-h-screen bg-white px-4 py-6">
-      <div className="max-w-6xl mx-auto space-y-6">
-        <h1 className="text-3xl font-bold text-slate-900">
+    <div className="min-h-screen bg-white px-4 py-6 text-slate-900">
+      <div className="max-w-6xl mx-auto space-y-8">
+        <h1 className="text-3xl font-black text-emerald-700">
           ALIVES 타일 계산기
         </h1>
 
-        {/* 제품 선택 */}
-        <section className="bg-slate-50 rounded-xl p-4 flex gap-3">
-          {(["buddy", "dot"] as ProductType[]).map((t) => (
+        {/* 타입 선택 */}
+        <section className="border rounded-xl p-5">
+          <div className="grid md:grid-cols-2 gap-4">
             <button
-              key={t}
-              onClick={() => setProduct(t)}
-              className={`flex-1 rounded-lg p-4 border ${
-                product === t
+              onClick={() => setProductType("buddy")}
+              className={`p-4 rounded-xl border ${
+                productType === "buddy"
                   ? "border-emerald-500 bg-emerald-50"
-                  : "border-slate-200"
+                  : "border-slate-300"
               }`}
             >
-              <b>{t === "buddy" ? "버디 데크타일" : "도트 데크타일"}</b>
+              버디 데크타일 (30×30)
             </button>
-          ))}
+
+            <button
+              onClick={() => setProductType("dot")}
+              className={`p-4 rounded-xl border ${
+                productType === "dot"
+                  ? "border-emerald-500 bg-emerald-50"
+                  : "border-slate-300"
+              }`}
+            >
+              도트 데크타일 (10×10 → 패턴)
+            </button>
+          </div>
         </section>
 
-        {/* 사이즈 */}
-        <section className="bg-slate-50 rounded-xl p-4 grid grid-cols-2 gap-3">
-          <input
-            type="number"
-            value={widthCm}
-            onChange={(e) => setWidthCm(Math.max(0, Number(e.target.value)))}
-            className="border rounded px-3 py-2"
-            placeholder="가로 cm"
-          />
-          <input
-            type="number"
-            value={heightCm}
-            onChange={(e) => setHeightCm(Math.max(0, Number(e.target.value)))}
-            className="border rounded px-3 py-2"
-            placeholder="세로 cm"
-          />
-        </section>
+        {/* 입력 */}
+        <section className="border rounded-xl p-5">
+          <div className="flex gap-3">
+            <input
+              type="number"
+              value={widthCm}
+              onChange={(e) => setWidthCm(Number(e.target.value))}
+              className="border px-3 py-2 rounded w-full"
+              placeholder="가로(cm)"
+            />
+            <input
+              type="number"
+              value={heightCm}
+              onChange={(e) => setHeightCm(Number(e.target.value))}
+              className="border px-3 py-2 rounded w-full"
+              placeholder="세로(cm)"
+            />
+          </div>
 
-        {/* 옵션 */}
-        <section className="bg-slate-50 rounded-xl p-4 space-y-4">
-          {product === "buddy" ? (
-            <div className="grid grid-cols-2 gap-3">
-              {TILE_COLORS.map((c) => (
+          {/* 버디 색상 */}
+          {productType === "buddy" && (
+            <div className="grid grid-cols-2 gap-3 mt-4">
+              {colorOptions.map((c) => (
                 <button
                   key={c.key}
                   onClick={() => setBuddyColor(c.key)}
-                  className={`p-3 rounded border flex items-center gap-2 ${
+                  className={`border p-3 rounded flex items-center gap-3 ${
                     buddyColor === c.key
-                      ? "border-emerald-500"
-                      : "border-slate-200"
+                      ? "border-emerald-500 bg-emerald-50"
+                      : "border-slate-300"
                   }`}
                 >
-                  <span
-                    className="w-6 h-6 rounded border"
+                  <div
+                    className="w-6 h-6 border"
                     style={{ backgroundColor: c.color }}
                   />
                   {c.label}
                 </button>
               ))}
             </div>
-          ) : (
-            <>
-              {/* 패턴 */}
-              <div className="flex gap-3">
+          )}
+
+          {/* 도트 옵션 */}
+          {productType === "dot" && (
+            <div className="space-y-4 mt-6">
+              <div className="grid grid-cols-3 gap-3">
                 {(["AAAA", "ABBA", "ABBC"] as DotPattern[]).map((p) => (
                   <button
                     key={p}
                     onClick={() => setDotPattern(p)}
-                    className={`p-3 rounded border ${
+                    className={`border p-3 rounded ${
                       dotPattern === p
-                        ? "border-emerald-500"
-                        : "border-slate-200"
+                        ? "border-emerald-500 bg-emerald-50"
+                        : "border-slate-300"
                     }`}
                   >
                     {p}
@@ -181,97 +205,77 @@ export default function Page() {
                 ))}
               </div>
 
-              {/* A/B/C */}
               {(["A", "B", "C"] as const).map((slot) =>
-                slot === "C" && dotPattern !== "ABBC" ? null : slot === "B" &&
-                  dotPattern === "AAAA" ? null : (
+                slot === "C" && dotPattern !== "ABBC" ? null : (
                   <div key={slot} className="flex gap-2 items-center">
                     <b>{slot}</b>
-                    {TILE_COLORS.map((c) => (
+                    {colorOptions.map((c) => (
                       <button
                         key={c.key + slot}
                         onClick={() =>
                           slot === "A"
-                            ? setDotA(c.key)
+                            ? setDotColorA(c.key)
                             : slot === "B"
-                            ? setDotB(c.key)
-                            : setDotC(c.key)
+                            ? setDotColorB(c.key)
+                            : setDotColorC(c.key)
                         }
-                        className="w-6 h-6 rounded border"
-                        style={{ backgroundColor: c.color }}
-                      />
+                        className="border px-2 py-1 rounded text-xs"
+                      >
+                        {c.label}
+                      </button>
                     ))}
                   </div>
                 )
               )}
-            </>
+            </div>
           )}
         </section>
 
         {/* 미리보기 */}
-        <section className="bg-slate-50 rounded-xl p-4 overflow-auto">
-          {product === "buddy" ? (
+        <section className="border rounded-xl p-5">
+          {productType === "buddy" && (
             <div
               className="inline-grid"
               style={{
-                gridTemplateColumns: `repeat(${pxBuddyX}, 16px)`,
+                gridTemplateColumns: `repeat(${previewBuddyX}, 20px)`,
               }}
             >
-              {Array.from({ length: pxBuddyX * pxBuddyY }).map((_, i) => (
-                <div
-                  key={i}
-                  style={{
-                    backgroundColor: colorMap[buddyColor],
-                    border: "1px solid #9CA3AF",
-                  }}
-                />
-              ))}
-            </div>
-          ) : (
-            <div
-              className="inline-grid"
-              style={{
-                gridTemplateColumns: `repeat(${pxDotX}, 10px)`,
-              }}
-            >
-              {Array.from({ length: pxDotX * pxDotY }).map((_, i) => {
-                const x = i % pxDotX;
-                const y = Math.floor(i / pxDotX);
-                const idx = (y % 2) * 2 + (x % 2);
-                const sym = DOT_PATTERN_MAP[dotPattern][idx];
-                return (
+              {Array.from({ length: previewBuddyX * previewBuddyY }).map(
+                (_, i) => (
                   <div
                     key={i}
-                    style={{
-                      backgroundColor: getDotColor(sym),
-                      border: "1px solid #9CA3AF",
-                    }}
+                    className="border border-slate-400"
+                    style={{ backgroundColor: colorMap[buddyColor] }}
                   />
-                );
-              })}
+                )
+              )}
             </div>
           )}
-        </section>
 
-        {/* 수량 */}
-        <section className="bg-slate-50 rounded-xl p-4 text-sm">
-          {product === "buddy" ? (
-            <>
-              필요 수량: <b>{buddyNeed}</b> 장<br />
-              36p: {buddyPack.counts[36] || 0} / 9p:{" "}
-              {buddyPack.counts[9] || 0} / 2p:{" "}
-              {buddyPack.counts[2] || 0}
-              <br />
-              남는 수량: <b>{buddyPack.leftover}</b>
-            </>
-          ) : (
-            <>
-              필요 수량: <b>{dotNeed}</b> 개<br />
-              120p: {dotPack.counts[120] || 0} / 40p:{" "}
-              {dotPack.counts[40] || 0}
-              <br />
-              남는 수량: <b>{dotPack.leftover}</b>
-            </>
+          {productType === "dot" && (
+            <div
+              className="inline-grid"
+              style={{
+                gridTemplateColumns: `repeat(${previewDotX}, 10px)`,
+              }}
+            >
+              {Array.from({ length: previewDotX * previewDotY }).map(
+                (_, i) => {
+                  const x = i % previewDotX;
+                  const y = Math.floor(i / previewDotX);
+                  const symbol =
+                    dotPatternCells[dotPattern][(y % 2) * 2 + (x % 2)];
+
+                  return (
+                    <div
+                      key={i}
+                      className="border border-slate-400"
+                      style={{ backgroundColor: getDotColor(symbol) }}
+                    />
+                  );
+                }
+              )}
+            </div>
           )}
         </section>
       </div>
