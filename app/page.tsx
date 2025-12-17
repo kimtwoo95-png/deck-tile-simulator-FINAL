@@ -6,36 +6,34 @@ import { useState } from "react";
    타입 정의
 -------------------------------------------- */
 type ProductType = "buddy" | "dot";
-
 type BuddyColor = "ivory" | "lightgray" | "beige" | "butter";
 
-/** 🔥 도트 색상 → 4색으로 축소 */
+/** 🔥 도트 색상 → 4색 */
 type DotColorKey = "ivory" | "lightgray" | "beige" | "butter";
-
 type DotPattern = "AAAA" | "ABBA" | "ABBC";
 
 /* --------------------------------------------
    버디 색상
 -------------------------------------------- */
-const buddyColorOptions: { key: BuddyColor; label: string; color: string }[] = [
+const buddyColorOptions = [
   { key: "ivory", label: "아이보리", color: "#FDF8EE" },
   { key: "lightgray", label: "라이트그레이", color: "#D4D4D8" },
   { key: "beige", label: "베이지", color: "#EBD9B4" },
   { key: "butter", label: "버터", color: "#FFE9A7" },
-];
+] as const;
 
 /* --------------------------------------------
-   🔥 도트 색상 (6 → 4)
+   도트 색상 (4색)
 -------------------------------------------- */
-const dotColorOptions: { key: DotColorKey; label: string; color: string }[] = [
+const dotColorOptions = [
   { key: "ivory", label: "아이보리", color: "#FDF8EE" },
   { key: "lightgray", label: "라이트그레이", color: "#D4D4D8" },
   { key: "beige", label: "베이지", color: "#EBD9B4" },
   { key: "butter", label: "버터", color: "#FFE9A7" },
-];
+] as const;
 
 /* --------------------------------------------
-   도트 패턴 (2×2)
+   도트 패턴
 -------------------------------------------- */
 const dotPatternCells: Record<DotPattern, ("A" | "B" | "C")[]> = {
   AAAA: ["A", "A", "A", "A"],
@@ -44,12 +42,11 @@ const dotPatternCells: Record<DotPattern, ("A" | "B" | "C")[]> = {
 };
 
 /* --------------------------------------------
-   박스 계산 함수
+   박스 계산
 -------------------------------------------- */
 function calcPacks(totalNeeded: number, packSizes: number[]) {
   const sorted = [...packSizes].sort((a, b) => b - a);
   const smallest = sorted[sorted.length - 1];
-
   const packCounts: Record<number, number> = {};
   let remaining = totalNeeded;
 
@@ -68,11 +65,7 @@ function calcPacks(totalNeeded: number, packSizes: number[]) {
     0
   );
 
-  return {
-    packCounts,
-    totalPieces,
-    leftover: totalPieces - totalNeeded,
-  };
+  return { packCounts, totalPieces, leftover: totalPieces - totalNeeded };
 }
 
 /* --------------------------------------------
@@ -80,10 +73,8 @@ function calcPacks(totalNeeded: number, packSizes: number[]) {
 -------------------------------------------- */
 export default function Page() {
   const [productType, setProductType] = useState<ProductType>("buddy");
-
   const [widthCm, setWidthCm] = useState(300);
   const [heightCm, setHeightCm] = useState(300);
-
   const [buddyColor, setBuddyColor] = useState<BuddyColor>("ivory");
 
   const [dotPattern, setDotPattern] = useState<DotPattern>("AAAA");
@@ -104,33 +95,54 @@ export default function Page() {
   const dotNeeded = dotX * dotY;
   const dotPack = calcPacks(dotNeeded, [120, 40]);
 
-  const previewBuddyX = Math.min(buddyX, maxPreviewTiles);
-  const previewBuddyY = Math.min(buddyY, maxPreviewTiles);
   const previewDotX = Math.min(dotX, maxPreviewTiles);
   const previewDotY = Math.min(dotY, maxPreviewTiles);
 
-  const colorMap: Record<DotColorKey, string> = Object.fromEntries(
+  const colorMap = Object.fromEntries(
     dotColorOptions.map((c) => [c.key, c.color])
   ) as Record<DotColorKey, string>;
 
-  const getDotColor = (symbol: "A" | "B" | "C") =>
-    symbol === "A"
-      ? colorMap[dotColorA]
-      : symbol === "B"
-      ? colorMap[dotColorB]
-      : colorMap[dotColorC];
+  const getDotColor = (s: "A" | "B" | "C") =>
+    s === "A" ? colorMap[dotColorA] : s === "B" ? colorMap[dotColorB] : colorMap[dotColorC];
 
   /* UI */
   return (
-    <div className="min-h-screen bg-white px-4 py-6 text-slate-900">
-      <div className="max-w-6xl mx-auto space-y-8">
-        <h1 className="text-3xl font-black tracking-tight text-emerald-700">
-          ALIVES 타일 계산기
-        </h1>
+    <div className="min-h-screen bg-white p-6 text-slate-900">
+      <h1 className="text-3xl font-black text-emerald-700 mb-6">
+        ALIVES 타일 계산기
+      </h1>
 
-        {/* 이하 UI / 미리보기 / 계산 로직 전부 기존과 동일 */}
-        {/* 네가 쓰던 JSX 그대로 유지됨 */}
-      </div>
+      <button
+        className="mb-4 px-4 py-2 border rounded"
+        onClick={() =>
+          setProductType(productType === "buddy" ? "dot" : "buddy")
+        }
+      >
+        {productType === "buddy" ? "도트 보기" : "버디 보기"}
+      </button>
+
+      {productType === "dot" && (
+        <div
+          className="grid"
+          style={{
+            gridTemplateColumns: `repeat(${previewDotX}, 12px)`,
+          }}
+        >
+          {Array.from({ length: previewDotX * previewDotY }).map((_, i) => {
+            const x = i % previewDotX;
+            const y = Math.floor(i / previewDotX);
+            const idx = (y % 2) * 2 + (x % 2);
+            const symbol = dotPatternCells[dotPattern][idx];
+            return (
+              <div
+                key={i}
+                className="w-3 h-3 border"
+                style={{ backgroundColor: getDotColor(symbol) }}
+              />
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
