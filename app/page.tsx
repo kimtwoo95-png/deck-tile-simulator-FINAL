@@ -1,17 +1,26 @@
 "use client";
+
 import { useState } from "react";
 
 /* --------------------------------------------
    타입 정의
 -------------------------------------------- */
 type ProductType = "buddy" | "dot";
+
 type BuddyColor = "ivory" | "lightgray" | "beige" | "butter";
-// 도트 색상도 버디와 동일한 4개로 변경
-type DotColorKey = "ivory" | "lightgray" | "beige" | "butter";
+
+type DotColorKey =
+  | "creamWhite"
+  | "brickBrown"
+  | "butter"
+  | "mint"
+  | "softBlue"
+  | "deepGreen";
+
 type DotPattern = "AAAA" | "ABBA" | "ABBC";
 
 /* --------------------------------------------
-   버디 색상 (4색상)
+   버디 색상
 -------------------------------------------- */
 const buddyColorOptions: { key: BuddyColor; label: string; color: string }[] = [
   { key: "ivory", label: "아이보리", color: "#FDF8EE" },
@@ -21,13 +30,15 @@ const buddyColorOptions: { key: BuddyColor; label: string; color: string }[] = [
 ];
 
 /* --------------------------------------------
-   도트 색상 (버디와 동일한 4색상으로 변경)
+   도트 색상
 -------------------------------------------- */
 const dotColorOptions: { key: DotColorKey; label: string; color: string }[] = [
-  { key: "ivory", label: "아이보리", color: "#FDF8EE" },
-  { key: "lightgray", label: "라이트그레이", color: "#D4D4D8" },
-  { key: "beige", label: "베이지", color: "#EBD9B4" },
+  { key: "creamWhite", label: "크림 화이트", color: "#FDFBF5" },
+  { key: "brickBrown", label: "브릭브라운", color: "#8B5A3C" },
   { key: "butter", label: "버터", color: "#FFE9A7" },
+  { key: "mint", label: "민트", color: "#B9E6D3" },
+  { key: "softBlue", label: "소프트 블루", color: "#C7E0FF" },
+  { key: "deepGreen", label: "딥그린", color: "#29544B" },
 ];
 
 /* --------------------------------------------
@@ -45,21 +56,26 @@ const dotPatternCells: Record<DotPattern, ("A" | "B" | "C")[]> = {
 function calcPacks(totalNeeded: number, packSizes: number[]) {
   const sorted = [...packSizes].sort((a, b) => b - a);
   const smallest = sorted[sorted.length - 1];
+
   const packCounts: Record<number, number> = {};
   let remaining = totalNeeded;
+
   for (const size of sorted) {
     const count = Math.floor(remaining / size);
     packCounts[size] = count;
     remaining -= count * size;
   }
+
   if (remaining > 0) {
     packCounts[smallest] = (packCounts[smallest] || 0) + 1;
     remaining = 0;
   }
+
   const totalPieces = sorted.reduce(
     (sum, size) => sum + size * (packCounts[size] || 0),
     0
   );
+
   return {
     packCounts,
     totalPieces,
@@ -72,13 +88,16 @@ function calcPacks(totalNeeded: number, packSizes: number[]) {
 -------------------------------------------- */
 export default function Page() {
   const [productType, setProductType] = useState<ProductType>("buddy");
+
   const [widthCm, setWidthCm] = useState(300);
   const [heightCm, setHeightCm] = useState(300);
+
   const [buddyColor, setBuddyColor] = useState<BuddyColor>("ivory");
+
   const [dotPattern, setDotPattern] = useState<DotPattern>("AAAA");
-  const [dotColorA, setDotColorA] = useState<DotColorKey>("ivory");
-  const [dotColorB, setDotColorB] = useState<DotColorKey>("butter");
-  const [dotColorC, setDotColorC] = useState<DotColorKey>("beige");
+  const [dotColorA, setDotColorA] = useState<DotColorKey>("creamWhite");
+  const [dotColorB, setDotColorB] = useState<DotColorKey>("deepGreen");
+  const [dotColorC, setDotColorC] = useState<DotColorKey>("mint");
 
   // 미리보기 최대 타일 수(성능 보호)
   const maxPreviewTiles = 40;
@@ -101,6 +120,7 @@ export default function Page() {
 
   const previewBuddyX = Math.min(buddyX, maxPreviewTiles);
   const previewBuddyY = Math.min(buddyY, maxPreviewTiles);
+
   const previewDotX = Math.min(dotX, maxPreviewTiles);
   const previewDotY = Math.min(dotY, maxPreviewTiles);
 
@@ -134,6 +154,7 @@ export default function Page() {
         -------------------------------------------- */}
         <section className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
           <h2 className="text-lg font-semibold mb-3">1. 데크타일 종류 선택</h2>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* 버디 */}
             <button
@@ -147,6 +168,7 @@ export default function Page() {
               <div className="font-bold text-base">버디 데크타일</div>
               <div className="text-xs text-slate-500">30 × 30 cm / 4색상</div>
             </button>
+
             {/* 도트 */}
             <button
               onClick={() => setProductType("dot")}
@@ -158,7 +180,7 @@ export default function Page() {
             >
               <div className="font-bold text-base">도트 데크타일</div>
               <div className="text-xs text-slate-500">
-                10 × 10 cm / 4색상 / 패턴 AAAA·ABBA·ABBC
+                10 × 10 cm / 6색상 / 패턴 AAAA·ABBA·ABBC
               </div>
             </button>
           </div>
@@ -176,6 +198,7 @@ export default function Page() {
                 <h2 className="text-lg font-semibold mb-3">
                   2. 공간 사이즈 입력 (cm)
                 </h2>
+
                 <div className="flex gap-3">
                   <input
                     type="number"
@@ -200,6 +223,7 @@ export default function Page() {
                   <h2 className="text-lg font-semibold mb-3">
                     3. 버디 색상 선택
                   </h2>
+
                   <div className="grid grid-cols-2 gap-3">
                     {buddyColorOptions.map((c) => (
                       <button
@@ -228,34 +252,39 @@ export default function Page() {
                   <h2 className="text-lg font-semibold">
                     3. 도트 패턴 & 색상 선택
                   </h2>
+
                   {/* 패턴 선택 */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {(["AAAA", "ABBA", "ABBC"] as DotPattern[]).map((pattern) => (
-                      <button
-                        key={pattern}
-                        onClick={() => setDotPattern(pattern)}
-                        className={`border rounded-xl p-4 flex flex-col items-center transition ${
-                          dotPattern === pattern
-                            ? "border-emerald-500 bg-emerald-50"
-                            : "border-slate-300 hover:border-emerald-300"
-                        }`}
-                      >
-                        <div className="grid grid-cols-2 gap-0">
-                          {dotPatternCells[pattern].map((symbol, i) => (
-                            <div
-                              key={i}
-                              className="w-10 h-10 border border-slate-400"
-                              style={{
-                                backgroundColor: getDotColor(symbol),
-                              }}
-                            ></div>
-                          ))}
-                        </div>
-                        <span className="text-xs mt-2 font-semibold">
-                          {pattern}
-                        </span>
-                      </button>
-                    ))}
+                    {(["AAAA", "ABBA", "ABBC"] as DotPattern[]).map(
+                      (pattern) => (
+                        <button
+                          key={pattern}
+                          onClick={() => setDotPattern(pattern)}
+                          className={`border rounded-xl p-4 flex flex-col items-center transition ${
+                            dotPattern === pattern
+                              ? "border-emerald-500 bg-emerald-50"
+                              : "border-slate-300 hover:border-emerald-300"
+                          }`}
+                        >
+                          {/* 2×2 패턴 미리보기 */}
+                          <div className="grid grid-cols-2 gap-0">
+                            {dotPatternCells[pattern].map((symbol, i) => (
+                              <div
+                                key={i}
+                                className="w-10 h-10 border border-slate-400"
+                                style={{
+                                  backgroundColor: getDotColor(symbol),
+                                }}
+                              ></div>
+                            ))}
+                          </div>
+
+                          <span className="text-xs mt-2 font-semibold">
+                            {pattern}
+                          </span>
+                        </button>
+                      )
+                    )}
                   </div>
 
                   {/* 색상 슬롯 */}
@@ -345,6 +374,7 @@ export default function Page() {
             -------------------------------------------- */}
             <div className="space-y-4">
               <h2 className="text-lg font-semibold mb-2">4. 미리보기</h2>
+
               <div className="border border-slate-300 rounded-xl bg-slate-50 p-3 max-h-[420px] overflow-auto">
                 {/* 버디 */}
                 {productType === "buddy" && (
@@ -387,6 +417,7 @@ export default function Page() {
                       const y = Math.floor(idx / previewDotX);
                       const patternIndex = (y % 2) * 2 + (x % 2);
                       const symbol = dotPatternCells[dotPattern][patternIndex];
+
                       return (
                         <div
                           key={idx}
@@ -407,17 +438,21 @@ export default function Page() {
         -------------------------------------------- */}
         <section className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
           <h2 className="text-lg font-semibold mb-3">5. 수량 & 박스 계산</h2>
+
           {/* 버디 */}
           {productType === "buddy" && (
             <div className="text-sm space-y-1">
               <div>
-                필요한 장수: <span className="font-bold">{buddyNeeded}</span> (
+                필요한 장수:{" "}
+                <span className="font-bold">{buddyNeeded}</span> (
                 {buddyX} × {buddyY})
               </div>
+
               <div className="mt-2 font-medium">포장 구성 (36p / 9p / 2p)</div>
               <div>36p: {buddyPack.packCounts[36] || 0} 박스</div>
               <div>9p: {buddyPack.packCounts[9] || 0} 박스</div>
               <div>2p: {buddyPack.packCounts[2] || 0} 박스</div>
+
               <div className="mt-2">
                 총 장수: <b>{buddyPack.totalPieces}</b> 장
               </div>
@@ -433,9 +468,11 @@ export default function Page() {
               <div>
                 필요한 1P: <b>{dotNeeded}</b> ({dotX} × {dotY})
               </div>
+
               <div className="mt-2 font-medium">포장 구성 (120p / 40p)</div>
               <div>120p: {dotPack.packCounts[120] || 0} 박스</div>
               <div>40p: {dotPack.packCounts[40] || 0} 박스</div>
+
               <div className="mt-2">
                 총 개수: <b>{dotPack.totalPieces}</b> 개
               </div>
