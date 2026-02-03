@@ -3,30 +3,46 @@
 import { useMemo, useState } from "react";
 
 /* =========================================================
-   타입
+   타입 정의
 ========================================================= */
 type ProductType = "buddy" | "dot";
 type BuddyColor = "ivory" | "lightgray" | "beige" | "butter";
-type DotColorKey = "ivory" | "lightgray" | "beige" | "butter";
+
+/** 도트 색상 8개 */
+type DotColorKey =
+  | "ivory"
+  | "lightgray"
+  | "beige"
+  | "butter"
+  | "tealGreen"
+  | "lemon"
+  | "toffee"
+  | "lavender";
+
 type DotPattern = "AAAA" | "ABBA" | "ABBC";
 
-type ColorOption<T extends string> = { key: T; label: string; color: string };
-
 /* =========================================================
-   옵션 (버디 4색 / 도트 4색 동일)
+   색상 옵션
+   - 라이트그레이: 약간 더 밝게 (#E5E7EB)
 ========================================================= */
-const buddyColorOptions: ColorOption<BuddyColor>[] = [
+const buddyColorOptions: { key: BuddyColor; label: string; color: string }[] = [
   { key: "ivory", label: "아이보리", color: "#FDF8EE" },
-  { key: "lightgray", label: "라이트그레이", color: "#D4D4D8" },
+  { key: "lightgray", label: "라이트그레이", color: "#E5E7EB" }, // 밝게
   { key: "beige", label: "베이지", color: "#EBD9B4" },
   { key: "butter", label: "버터", color: "#FFE9A7" },
 ];
 
-const dotColorOptions: ColorOption<DotColorKey>[] = [
+const dotColorOptions: { key: DotColorKey; label: string; color: string }[] = [
   { key: "ivory", label: "아이보리", color: "#FDF8EE" },
-  { key: "lightgray", label: "라이트그레이", color: "#D4D4D8" },
+  { key: "lightgray", label: "라이트그레이", color: "#E5E7EB" }, // 밝게
   { key: "beige", label: "베이지", color: "#EBD9B4" },
   { key: "butter", label: "버터", color: "#FFE9A7" },
+
+  // 추가 4색
+  { key: "tealGreen", label: "틸그린", color: "#2AA39A" },
+  { key: "lemon", label: "레몬", color: "#FFE066" },
+  { key: "toffee", label: "토피", color: "#B07A4A" },
+  { key: "lavender", label: "라벤더", color: "#B9A7FF" },
 ];
 
 /* =========================================================
@@ -39,7 +55,7 @@ const dotPatternCells: Record<DotPattern, ("A" | "B" | "C")[]> = {
 };
 
 /* =========================================================
-   박스 계산 (기존 로직 유지)
+   박스 계산 (기존 방식 유지)
 ========================================================= */
 function calcPacks(totalNeeded: number, packSizes: number[]) {
   const sorted = [...packSizes].sort((a, b) => b - a);
@@ -71,96 +87,100 @@ function calcPacks(totalNeeded: number, packSizes: number[]) {
 }
 
 /* =========================================================
-   작은 UI 유틸
+   UI 조각
 ========================================================= */
-function clampNumber(n: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, n));
-}
-
-function getOptionColor<T extends string>(
-  options: ColorOption<T>[],
-  key: T
-): string {
-  return options.find((o) => o.key === key)?.color ?? "#EEE";
-}
-
-function ChipButton(props: {
-  active: boolean;
+function ColorChipButton(props: {
+  label: string;
+  color: string;
+  selected: boolean;
   onClick: () => void;
-  title: string;
-  subtitle?: string;
+  compact?: boolean;
 }) {
-  const { active, onClick, title, subtitle } = props;
+  const { label, color, selected, onClick, compact } = props;
+
   return (
     <button
       type="button"
       onClick={onClick}
       className={[
-        "w-full rounded-lg border text-left transition",
-        "px-3 py-2 md:px-4 md:py-3",
-        "text-sm md:text-base",
-        active
-          ? "border-emerald-500 bg-emerald-50 ring-1 ring-emerald-200"
-          : "border-slate-200 bg-white hover:border-emerald-300",
+        "group w-full rounded-xl border transition",
+        selected
+          ? "border-emerald-500 bg-emerald-50"
+          : "border-slate-200 bg-white hover:border-emerald-200 hover:bg-slate-50",
+        compact ? "p-2" : "p-3",
       ].join(" ")}
     >
-      <div className="font-semibold">{title}</div>
-      {subtitle ? (
-        <div className="text-[11px] md:text-xs text-slate-500 mt-0.5">
-          {subtitle}
+      <div className="flex items-center gap-2">
+        <div
+          className={[
+            "rounded-lg border",
+            compact ? "h-6 w-6" : "h-8 w-8",
+          ].join(" ")}
+          style={{
+            backgroundColor: color,
+            borderColor: "#94A3B8",
+          }}
+        />
+        <div className="min-w-0 flex-1 text-left">
+          <div className={["font-semibold truncate", compact ? "text-xs" : "text-sm"].join(" ")}>
+            {label}
+          </div>
+          <div className={["text-[11px] text-slate-500", compact ? "leading-tight" : ""].join(" ")}>
+            {selected ? "선택됨" : " "}
+          </div>
         </div>
-      ) : null}
+
+        <div
+          className={[
+            "shrink-0 rounded-full px-2 py-1 text-[11px] font-bold",
+            selected ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-500",
+          ].join(" ")}
+        >
+          {selected ? "✓" : ""}
+        </div>
+      </div>
     </button>
   );
 }
 
-function ColorPickButton(props: {
-  active: boolean;
+function PatternButton(props: {
+  pattern: DotPattern;
+  selected: boolean;
+  getColor: (s: "A" | "B" | "C") => string;
   onClick: () => void;
-  label: string;
-  hex: string;
-  compact?: boolean;
 }) {
-  const { active, onClick, label, hex, compact } = props;
+  const { pattern, selected, getColor, onClick } = props;
 
   return (
     <button
       type="button"
       onClick={onClick}
       className={[
-        "rounded-lg border transition",
-        compact ? "p-2" : "p-3",
-        active
-          ? "border-emerald-500 bg-emerald-50 ring-1 ring-emerald-200"
-          : "border-slate-200 bg-white hover:border-emerald-300",
+        "rounded-xl border p-3 transition",
+        selected
+          ? "border-emerald-500 bg-emerald-50"
+          : "border-slate-200 bg-white hover:border-emerald-200 hover:bg-slate-50",
       ].join(" ")}
     >
-      <div className="flex items-center gap-2">
-        <span
-          className={[
-            "inline-block rounded-md border",
-            compact ? "w-7 h-7" : "w-9 h-9",
-          ].join(" ")}
-          style={{
-            backgroundColor: hex,
-            borderColor: "rgba(0,0,0,0.18)",
-          }}
-        />
-        <div className="text-left">
-          <div className={compact ? "text-xs font-semibold" : "text-sm font-semibold"}>
-            {label}
-          </div>
-          <div className="text-[10px] text-slate-500">{hex}</div>
+      <div className="flex items-center justify-center">
+        {/* gap-0 + border로 4칸 붙게 */}
+        <div className="grid grid-cols-2 gap-0 overflow-hidden rounded-lg border border-slate-300">
+          {dotPatternCells[pattern].map((sym, i) => (
+            <div
+              key={i}
+              style={{
+                width: 28,
+                height: 28,
+                backgroundColor: getColor(sym),
+                border: "0.5px solid #9AA3AF",
+              }}
+            />
+          ))}
         </div>
       </div>
-
-      {active ? (
-        <div className="mt-2 text-[11px] font-semibold text-emerald-700">
-          ✓ 선택됨
-        </div>
-      ) : (
-        <div className="mt-2 text-[11px] text-slate-400">선택</div>
-      )}
+      <div className="mt-2 text-center text-xs font-black tracking-wide text-slate-700">
+        {pattern}
+      </div>
     </button>
   );
 }
@@ -171,43 +191,53 @@ function ColorPickButton(props: {
 export default function Page() {
   const [productType, setProductType] = useState<ProductType>("buddy");
 
-  // 공간 (cm)
-  const [widthCm, setWidthCm] = useState<number>(400);
-  const [heightCm, setHeightCm] = useState<number>(300);
+  // 공간
+  const [widthCm, setWidthCm] = useState<number>(400);  // 가로
+  const [heightCm, setHeightCm] = useState<number>(300); // 세로
 
-  // 버디 색
+  // 버디
   const [buddyColor, setBuddyColor] = useState<BuddyColor>("ivory");
 
-  // 도트 패턴 + A/B/C
+  // 도트
   const [dotPattern, setDotPattern] = useState<DotPattern>("AAAA");
   const [dotColorA, setDotColorA] = useState<DotColorKey>("ivory");
   const [dotColorB, setDotColorB] = useState<DotColorKey>("butter");
   const [dotColorC, setDotColorC] = useState<DotColorKey>("beige");
 
-  // 미리보기 최대 타일 수 (성능)
-  const maxPreviewTiles = 44;
+  // 성능 보호
+  const maxPreviewTiles = 48;
+
+  // 윤곽선(요청: 더 얇게 + 더 어둡게)
+  const outlineColor = "#6B7280"; // 더 어둡게(회색)
+  const outlineThin = "0.5px";
 
   /* ---------------- 계산 ---------------- */
-  const buddyX = Math.ceil(widthCm / 30);
-  const buddyY = Math.ceil(heightCm / 30);
-  const buddyNeeded = buddyX * buddyY;
-  const buddyPack = calcPacks(buddyNeeded, [36, 9, 2]);
+  const buddyX = Math.ceil(Math.max(0, widthCm) / 30);
+  const buddyY = Math.ceil(Math.max(0, heightCm) / 30);
+  const buddyNeeded = Math.max(0, buddyX * buddyY);
+  const buddyPack = useMemo(() => calcPacks(buddyNeeded, [36, 9, 2]), [buddyNeeded]);
 
-  const dotX = Math.ceil(widthCm / 10);
-  const dotY = Math.ceil(heightCm / 10);
-  const dotNeeded = dotX * dotY;
-  const dotPack = calcPacks(dotNeeded, [120, 40]);
+  const dotX = Math.ceil(Math.max(0, widthCm) / 10);
+  const dotY = Math.ceil(Math.max(0, heightCm) / 10);
+  const dotNeeded = Math.max(0, dotX * dotY);
+  const dotPack = useMemo(() => calcPacks(dotNeeded, [120, 40]), [dotNeeded]);
 
-  const previewBuddyX = clampNumber(buddyX, 1, maxPreviewTiles);
-  const previewBuddyY = clampNumber(buddyY, 1, maxPreviewTiles);
-  const previewDotX = clampNumber(dotX, 1, maxPreviewTiles);
-  const previewDotY = clampNumber(dotY, 1, maxPreviewTiles);
+  const previewBuddyX = Math.min(buddyX || 0, maxPreviewTiles);
+  const previewBuddyY = Math.min(buddyY || 0, maxPreviewTiles);
+  const previewDotX = Math.min(dotX || 0, maxPreviewTiles);
+  const previewDotY = Math.min(dotY || 0, maxPreviewTiles);
 
+  /* ---------------- 색상 맵 ---------------- */
   const dotColorMap: Record<DotColorKey, string> = useMemo(() => {
-    return Object.fromEntries(dotColorOptions.map((c) => [c.key, c.color])) as Record<
-      DotColorKey,
-      string
-    >;
+    const m = {} as Record<DotColorKey, string>;
+    for (const c of dotColorOptions) m[c.key] = c.color;
+    return m;
+  }, []);
+
+  const buddyColorMap: Record<BuddyColor, string> = useMemo(() => {
+    const m = {} as Record<BuddyColor, string>;
+    for (const c of buddyColorOptions) m[c.key] = c.color;
+    return m;
   }, []);
 
   const getDotColor = (symbol: "A" | "B" | "C") =>
@@ -217,65 +247,61 @@ export default function Page() {
       ? dotColorMap[dotColorB]
       : dotColorMap[dotColorC];
 
-  /* ---------------- 미리보기 타일 렌더 ---------------- */
-  const buddyTileColor = getOptionColor(buddyColorOptions, buddyColor);
-
-  const previewTitle = productType === "buddy" ? "버디 데크타일 미리보기" : "도트 데크타일 미리보기";
-  const neededBigNumber = productType === "buddy" ? buddyNeeded : dotNeeded;
+  /* ---------------- 미리보기 타일 픽셀(모바일 고려) ---------------- */
+  const buddyTilePx = 14;
+  const dotTilePx = 8;
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
-      {/* =================================================
-          상단 고정(스티키) 미리보기
-          - 모바일에서 “항상 보이게” 우선
-          - 배경/보더 넣어서 떠있는 느낌
-      ================================================== */}
-      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200">
-        <div className="max-w-6xl mx-auto px-4 py-3">
-          <div className="flex items-end justify-between gap-3">
-            <div>
-              <h1 className="text-lg md:text-2xl font-black tracking-tight text-emerald-700">
+      {/* =========================
+          상단 고정 미리보기 (요청: 맨 위, 항상 보이게)
+         ========================= */}
+      <div className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
+        <div className="mx-auto max-w-6xl px-4 py-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="truncate text-lg font-black tracking-tight text-emerald-700 sm:text-xl">
                 ALIVES 타일 계산기
               </h1>
-              <div className="text-[11px] md:text-xs text-slate-500 mt-0.5">
-                공간 크기: {widthCm}cm × {heightCm}cm · {productType === "buddy" ? "버디(30×30)" : "도트(10×10)"}
+              <div className="text-xs text-slate-500">
+                공간: {widthCm}cm × {heightCm}cm
               </div>
             </div>
 
-            {/* 필요 개수 크게 */}
-            <div className="text-right">
-              <div className="text-[11px] md:text-xs text-slate-500">필요 개수</div>
-              <div className="text-2xl md:text-3xl font-black tracking-tight">
-                {neededBigNumber.toLocaleString()}
+            <div className="shrink-0 text-right">
+              <div className="text-[11px] text-slate-500">필요 개수</div>
+              <div className="text-2xl font-black leading-none text-slate-900">
+                {productType === "buddy" ? buddyNeeded : dotNeeded}
               </div>
             </div>
           </div>
 
-          {/* 미리보기 박스 */}
-          <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="font-semibold text-sm md:text-base">{previewTitle}</div>
-              <div className="text-[11px] md:text-xs text-slate-500">
-                (미리보기는 최대 {maxPreviewTiles}×{maxPreviewTiles}까지만 표시)
+          {/* 미리보기 */}
+          <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-2">
+            <div className="mb-2 flex items-center justify-between">
+              <div className="text-sm font-bold text-slate-800">미리보기</div>
+              <div className="text-[11px] text-slate-500">
+                (큰 공간은 {maxPreviewTiles}×{maxPreviewTiles}까지만 표시)
               </div>
             </div>
 
-            <div className="mt-2 overflow-auto">
+            <div className="max-h-[220px] overflow-auto rounded-lg bg-white p-2">
               {/* 버디 */}
               {productType === "buddy" && (
                 <div
                   className="inline-grid"
                   style={{
-                    gridTemplateColumns: `repeat(${previewBuddyX}, 18px)`,
-                    gridAutoRows: "18px",
+                    gridTemplateColumns: `repeat(${previewBuddyX}, ${buddyTilePx}px)`,
+                    gridAutoRows: `${buddyTilePx}px`,
                   }}
                 >
                   {Array.from({ length: previewBuddyX * previewBuddyY }).map((_, i) => (
                     <div
                       key={i}
-                      className="border-[0.5px] border-slate-400"
                       style={{
-                        backgroundColor: buddyTileColor,
+                        backgroundColor: buddyColorMap[buddyColor],
+                        border: `${outlineThin} solid ${outlineColor}`,
+                        boxSizing: "border-box",
                       }}
                     />
                   ))}
@@ -287,8 +313,8 @@ export default function Page() {
                 <div
                   className="inline-grid"
                   style={{
-                    gridTemplateColumns: `repeat(${previewDotX}, 10px)`,
-                    gridAutoRows: "10px",
+                    gridTemplateColumns: `repeat(${previewDotX}, ${dotTilePx}px)`,
+                    gridAutoRows: `${dotTilePx}px`,
                   }}
                 >
                   {Array.from({ length: previewDotX * previewDotY }).map((_, idx) => {
@@ -296,11 +322,15 @@ export default function Page() {
                     const y = Math.floor(idx / previewDotX);
                     const patternIndex = (y % 2) * 2 + (x % 2);
                     const symbol = dotPatternCells[dotPattern][patternIndex];
+
                     return (
                       <div
                         key={idx}
-                        className="border-[0.5px] border-slate-300"
-                        style={{ backgroundColor: getDotColor(symbol) }}
+                        style={{
+                          backgroundColor: getDotColor(symbol),
+                          border: `${outlineThin} solid ${outlineColor}`,
+                          boxSizing: "border-box",
+                        }}
                       />
                     );
                   })}
@@ -311,306 +341,249 @@ export default function Page() {
         </div>
       </div>
 
-      {/* =================================================
-          아래: 옵션/결과 (모바일에서 스크롤 영역)
-      ================================================== */}
-      <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-        {/* 1. 데크타일 종류 */}
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 md:p-5 shadow-sm">
-          <div className="flex items-end justify-between gap-3">
-            <h2 className="text-base md:text-lg font-bold">1. 데크타일 종류</h2>
-            <div className="text-[11px] md:text-xs text-slate-500">
-              {productType === "buddy" ? "버디" : "도트"} 선택됨
-            </div>
-          </div>
-
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            <ChipButton
-              active={productType === "buddy"}
+      {/* =========================
+          옵션 + 결과
+         ========================= */}
+      <div className="mx-auto max-w-6xl space-y-5 px-4 py-5">
+        {/* 1) 타일 종류 */}
+        <section className="rounded-2xl border border-slate-200 bg-white p-4">
+          <div className="mb-2 text-sm font-black text-slate-800">1. 타일 종류</div>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
               onClick={() => setProductType("buddy")}
-              title="버디 데크타일"
-              subtitle="30 × 30 cm / 4색상"
-            />
-            <ChipButton
-              active={productType === "dot"}
+              className={[
+                "rounded-xl border px-3 py-3 text-left text-sm font-bold transition",
+                productType === "buddy"
+                  ? "border-emerald-500 bg-emerald-50"
+                  : "border-slate-200 bg-white hover:border-emerald-200 hover:bg-slate-50",
+              ].join(" ")}
+            >
+              <div>버디 데크타일</div>
+              <div className="mt-1 text-[11px] font-medium text-slate-500">30×30cm · 4색</div>
+            </button>
+
+            <button
+              type="button"
               onClick={() => setProductType("dot")}
-              title="도트 데크타일"
-              subtitle="10 × 10 cm / 4색상 / 패턴 AAAA·ABBA·ABBC"
-            />
+              className={[
+                "rounded-xl border px-3 py-3 text-left text-sm font-bold transition",
+                productType === "dot"
+                  ? "border-emerald-500 bg-emerald-50"
+                  : "border-slate-200 bg-white hover:border-emerald-200 hover:bg-slate-50",
+              ].join(" ")}
+            >
+              <div>도트 데크타일</div>
+              <div className="mt-1 text-[11px] font-medium text-slate-500">
+                10×10cm · 8색 · AAAA/ABBA/ABBC
+              </div>
+            </button>
           </div>
         </section>
 
-        {/* 2. 공간 크기 */}
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 md:p-5 shadow-sm">
-          <h2 className="text-base md:text-lg font-bold">2. 공간 크기 (cm)</h2>
-
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <div className="text-xs text-slate-600">가로</div>
+        {/* 2) 공간 입력 */}
+        <section className="rounded-2xl border border-slate-200 bg-white p-4">
+          <div className="mb-2 text-sm font-black text-slate-800">2. 공간 크기 (cm)</div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-xl border border-slate-200 p-2">
+              <div className="text-[11px] font-semibold text-slate-500">가로</div>
               <input
                 type="number"
                 value={widthCm}
                 onChange={(e) => setWidthCm(Number(e.target.value))}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-400"
-                placeholder="가로(cm)"
+                className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-2 text-sm outline-none focus:border-emerald-400"
+                inputMode="numeric"
               />
             </div>
 
-            <div className="space-y-1">
-              <div className="text-xs text-slate-600">세로</div>
+            <div className="rounded-xl border border-slate-200 p-2">
+              <div className="text-[11px] font-semibold text-slate-500">세로</div>
               <input
                 type="number"
                 value={heightCm}
                 onChange={(e) => setHeightCm(Number(e.target.value))}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-400"
-                placeholder="세로(cm)"
+                className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-2 text-sm outline-none focus:border-emerald-400"
+                inputMode="numeric"
               />
             </div>
           </div>
-
-          <div className="mt-2 text-[11px] text-slate-500">
-            입력값 기준으로 필요한 타일 수를 올림 계산합니다.
-          </div>
         </section>
 
-        {/* 3. 옵션 (모바일: 접기/펼치기) */}
-        <section className="rounded-2xl border border-slate-200 bg-white p-0 shadow-sm overflow-hidden">
-          <details open className="group">
-            <summary className="list-none cursor-pointer select-none p-4 md:p-5 flex items-center justify-between">
+        {/* 3) 옵션 */}
+        <section className="rounded-2xl border border-slate-200 bg-white p-4">
+          <div className="mb-3 text-sm font-black text-slate-800">3. 옵션 선택</div>
+
+          {/* 버디 색상 */}
+          {productType === "buddy" && (
+            <div>
+              <div className="mb-2 text-xs font-bold text-slate-600">버디 색상</div>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {buddyColorOptions.map((c) => (
+                  <ColorChipButton
+                    key={c.key}
+                    label={c.label}
+                    color={c.color}
+                    selected={buddyColor === c.key}
+                    onClick={() => setBuddyColor(c.key)}
+                    compact
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 도트: 패턴 + A/B/C */}
+          {productType === "dot" && (
+            <div className="space-y-4">
+              {/* 패턴 */}
               <div>
-                <div className="text-base md:text-lg font-bold">3. 색상 / 패턴</div>
-                <div className="text-[11px] md:text-xs text-slate-500 mt-0.5">
-                  모바일에서 스크롤 줄이려면 이 섹션을 접어두셔도 됩니다.
+                <div className="mb-2 text-xs font-bold text-slate-600">도트 패턴</div>
+                <div className="grid grid-cols-3 gap-2">
+                  {(["AAAA", "ABBA", "ABBC"] as DotPattern[]).map((p) => (
+                    <PatternButton
+                      key={p}
+                      pattern={p}
+                      selected={dotPattern === p}
+                      getColor={getDotColor}
+                      onClick={() => setDotPattern(p)}
+                    />
+                  ))}
                 </div>
               </div>
-              <div className="text-xs text-emerald-700 font-semibold group-open:rotate-180 transition">
-                ▼
-              </div>
-            </summary>
 
-            <div className="border-t border-slate-200 p-4 md:p-5 space-y-6">
-              {/* 버디 옵션 */}
-              {productType === "buddy" && (
-                <div className="space-y-3">
-                  <div className="flex items-end justify-between">
-                    <h3 className="font-bold">버디 색상</h3>
-                    <div className="text-[11px] text-slate-500">
-                      선택: {buddyColorOptions.find((c) => c.key === buddyColor)?.label}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
-                    {buddyColorOptions.map((c) => (
-                      <ColorPickButton
-                        key={c.key}
-                        active={buddyColor === c.key}
-                        onClick={() => setBuddyColor(c.key)}
+              {/* A/B/C 색상 */}
+              <div className="space-y-3">
+                <div>
+                  <div className="mb-2 text-xs font-black text-slate-700">A 색상</div>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {dotColorOptions.map((c) => (
+                      <ColorChipButton
+                        key={"A-" + c.key}
                         label={c.label}
-                        hex={c.color}
+                        color={c.color}
+                        selected={dotColorA === c.key}
+                        onClick={() => setDotColorA(c.key)}
                         compact
                       />
                     ))}
                   </div>
-
-                  <div className="text-[11px] text-slate-500">
-                    버디 미리보기 윤곽선은 색상과 구분되도록 더 진한 회색 라인을 사용합니다.
-                  </div>
                 </div>
-              )}
 
-              {/* 도트 옵션 */}
-              {productType === "dot" && (
-                <div className="space-y-6">
-                  {/* 패턴 */}
-                  <div className="space-y-3">
-                    <div className="flex items-end justify-between">
-                      <h3 className="font-bold">도트 패턴</h3>
-                      <div className="text-[11px] text-slate-500">선택: {dotPattern}</div>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-2 md:gap-3">
-                      {(Object.keys(dotPatternCells) as DotPattern[]).map((p) => (
-                        <button
-                          key={p}
-                          type="button"
-                          onClick={() => setDotPattern(p)}
-                          className={[
-                            "rounded-xl border bg-white p-2 md:p-3 transition text-center",
-                            dotPattern === p
-                              ? "border-emerald-500 bg-emerald-50 ring-1 ring-emerald-200"
-                              : "border-slate-200 hover:border-emerald-300",
-                          ].join(" ")}
-                        >
-                          {/* 2×2 패턴은 “붙어있게” 보이도록 gap 0 */}
-                          <div className="mx-auto inline-grid grid-cols-2 gap-0">
-                            {dotPatternCells[p].map((sym, i) => (
-                              <div
-                                key={i}
-                                className="w-8 h-8 md:w-9 md:h-9 border-[0.5px] border-slate-300"
-                                style={{ backgroundColor: getDotColor(sym) }}
-                              />
-                            ))}
-                          </div>
-                          <div className="mt-1 text-[11px] md:text-xs font-bold">{p}</div>
-                          {dotPattern === p ? (
-                            <div className="mt-1 text-[11px] font-semibold text-emerald-700">
-                              ✓ 선택됨
-                            </div>
-                          ) : (
-                            <div className="mt-1 text-[11px] text-slate-400">선택</div>
-                          )}
-                        </button>
+                {dotPattern !== "AAAA" && (
+                  <div>
+                    <div className="mb-2 text-xs font-black text-slate-700">B 색상</div>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      {dotColorOptions.map((c) => (
+                        <ColorChipButton
+                          key={"B-" + c.key}
+                          label={c.label}
+                          color={c.color}
+                          selected={dotColorB === c.key}
+                          onClick={() => setDotColorB(c.key)}
+                          compact
+                        />
                       ))}
                     </div>
                   </div>
+                )}
 
-                  {/* 색상 A/B/C */}
-                  <div className="space-y-5">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="font-bold">
-                          A 색상 <span className="text-[11px] text-slate-500">(항상 사용)</span>
-                        </div>
-                        <div className="text-[11px] text-slate-500">
-                          선택: {dotColorOptions.find((c) => c.key === dotColorA)?.label}
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
-                        {dotColorOptions.map((c) => (
-                          <ColorPickButton
-                            key={"A-" + c.key}
-                            active={dotColorA === c.key}
-                            onClick={() => setDotColorA(c.key)}
-                            label={c.label}
-                            hex={c.color}
-                            compact
-                          />
-                        ))}
-                      </div>
+                {dotPattern === "ABBC" && (
+                  <div>
+                    <div className="mb-2 text-xs font-black text-slate-700">C 색상</div>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      {dotColorOptions.map((c) => (
+                        <ColorChipButton
+                          key={"C-" + c.key}
+                          label={c.label}
+                          color={c.color}
+                          selected={dotColorC === c.key}
+                          onClick={() => setDotColorC(c.key)}
+                          compact
+                        />
+                      ))}
                     </div>
-
-                    {dotPattern !== "AAAA" && (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="font-bold">
-                            B 색상{" "}
-                            <span className="text-[11px] text-slate-500">(ABBA/ABBC)</span>
-                          </div>
-                          <div className="text-[11px] text-slate-500">
-                            선택: {dotColorOptions.find((c) => c.key === dotColorB)?.label}
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
-                          {dotColorOptions.map((c) => (
-                            <ColorPickButton
-                              key={"B-" + c.key}
-                              active={dotColorB === c.key}
-                              onClick={() => setDotColorB(c.key)}
-                              label={c.label}
-                              hex={c.color}
-                              compact
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {dotPattern === "ABBC" && (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="font-bold">
-                            C 색상 <span className="text-[11px] text-slate-500">(ABBC)</span>
-                          </div>
-                          <div className="text-[11px] text-slate-500">
-                            선택: {dotColorOptions.find((c) => c.key === dotColorC)?.label}
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
-                          {dotColorOptions.map((c) => (
-                            <ColorPickButton
-                              key={"C-" + c.key}
-                              active={dotColorC === c.key}
-                              onClick={() => setDotColorC(c.key)}
-                              label={c.label}
-                              hex={c.color}
-                              compact
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </details>
+          )}
         </section>
 
-        {/* 4. 수량 & 박스 계산 */}
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 md:p-5 shadow-sm">
-          <h2 className="text-base md:text-lg font-bold">4. 수량 & 박스 계산</h2>
+        {/* 4) 계산 결과 */}
+        <section className="rounded-2xl border border-slate-200 bg-white p-4">
+          <div className="mb-2 text-sm font-black text-slate-800">4. 수량 & 박스 계산</div>
 
           {productType === "buddy" && (
-            <div className="mt-3 text-sm space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="text-slate-600">필요 장수</div>
-                <div className="text-lg font-black">{buddyNeeded.toLocaleString()}</div>
-              </div>
-              <div className="text-[11px] text-slate-500">
-                타일 배치: {buddyX} × {buddyY} (30×30cm 기준)
-              </div>
-
-              <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <div className="font-semibold mb-2">포장 구성 (36p / 9p / 2p)</div>
-                <div className="grid grid-cols-3 gap-2 text-sm">
-                  <div className="rounded-lg border border-slate-200 bg-white p-2">
-                    <div className="text-xs text-slate-500">36p</div>
-                    <div className="font-bold">{buddyPack.packCounts[36] || 0} 박스</div>
-                  </div>
-                  <div className="rounded-lg border border-slate-200 bg-white p-2">
-                    <div className="text-xs text-slate-500">9p</div>
-                    <div className="font-bold">{buddyPack.packCounts[9] || 0} 박스</div>
-                  </div>
-                  <div className="rounded-lg border border-slate-200 bg-white p-2">
-                    <div className="text-xs text-slate-500">2p</div>
-                    <div className="font-bold">{buddyPack.packCounts[2] || 0} 박스</div>
-                  </div>
+            <div className="space-y-2">
+              <div className="flex items-end justify-between rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div>
+                  <div className="text-xs font-semibold text-slate-500">필요 장수</div>
+                  <div className="text-3xl font-black">{buddyNeeded}</div>
                 </div>
+                <div className="text-right text-xs text-slate-600">
+                  {buddyX} × {buddyY} (30×30cm)
+                </div>
+              </div>
 
-                <div className="mt-3 text-sm">
-                  총 장수: <b>{buddyPack.totalPieces.toLocaleString()}</b> · 남는 장수:{" "}
-                  <b>{buddyPack.leftover.toLocaleString()}</b>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <div className="rounded-xl border border-slate-200 p-3">
+                  <div className="text-xs font-semibold text-slate-500">36p</div>
+                  <div className="text-xl font-black">{buddyPack.packCounts[36] || 0}</div>
+                </div>
+                <div className="rounded-xl border border-slate-200 p-3">
+                  <div className="text-xs font-semibold text-slate-500">9p</div>
+                  <div className="text-xl font-black">{buddyPack.packCounts[9] || 0}</div>
+                </div>
+                <div className="rounded-xl border border-slate-200 p-3">
+                  <div className="text-xs font-semibold text-slate-500">2p</div>
+                  <div className="text-xl font-black">{buddyPack.packCounts[2] || 0}</div>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-white p-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-slate-600">총 장수</span>
+                  <b>{buddyPack.totalPieces}</b>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">남는 장수</span>
+                  <b>{buddyPack.leftover}</b>
                 </div>
               </div>
             </div>
           )}
 
           {productType === "dot" && (
-            <div className="mt-3 text-sm space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="text-slate-600">필요 1P</div>
-                <div className="text-lg font-black">{dotNeeded.toLocaleString()}</div>
-              </div>
-              <div className="text-[11px] text-slate-500">
-                타일 배치: {dotX} × {dotY} (10×10cm 기준) · 패턴 {dotPattern}
-              </div>
-
-              <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <div className="font-semibold mb-2">포장 구성 (120p / 40p)</div>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="rounded-lg border border-slate-200 bg-white p-2">
-                    <div className="text-xs text-slate-500">120p</div>
-                    <div className="font-bold">{dotPack.packCounts[120] || 0} 박스</div>
-                  </div>
-                  <div className="rounded-lg border border-slate-200 bg-white p-2">
-                    <div className="text-xs text-slate-500">40p</div>
-                    <div className="font-bold">{dotPack.packCounts[40] || 0} 박스</div>
-                  </div>
+            <div className="space-y-2">
+              <div className="flex items-end justify-between rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div>
+                  <div className="text-xs font-semibold text-slate-500">필요 개수</div>
+                  <div className="text-3xl font-black">{dotNeeded}</div>
                 </div>
+                <div className="text-right text-xs text-slate-600">
+                  {dotX} × {dotY} (10×10cm)
+                </div>
+              </div>
 
-                <div className="mt-3 text-sm">
-                  총 개수: <b>{dotPack.totalPieces.toLocaleString()}</b> · 남는 수량:{" "}
-                  <b>{dotPack.leftover.toLocaleString()}</b>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="rounded-xl border border-slate-200 p-3">
+                  <div className="text-xs font-semibold text-slate-500">120p</div>
+                  <div className="text-xl font-black">{dotPack.packCounts[120] || 0}</div>
+                </div>
+                <div className="rounded-xl border border-slate-200 p-3">
+                  <div className="text-xs font-semibold text-slate-500">40p</div>
+                  <div className="text-xl font-black">{dotPack.packCounts[40] || 0}</div>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-white p-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-slate-600">총 개수</span>
+                  <b>{dotPack.totalPieces}</b>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">남는 수량</span>
+                  <b>{dotPack.leftover}</b>
                 </div>
               </div>
             </div>
@@ -618,7 +591,7 @@ export default function Page() {
         </section>
 
         {/* 하단 여백 */}
-        <div className="h-10" />
+        <div className="h-4" />
       </div>
     </div>
   );
