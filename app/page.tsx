@@ -6,43 +6,45 @@ import { useMemo, useState } from "react";
    타입 정의
 ========================================================= */
 type ProductType = "buddy" | "dot";
+
 type BuddyColor = "ivory" | "lightgray" | "beige" | "butter";
 
-/** 도트 색상 8개 */
 type DotColorKey =
   | "ivory"
   | "lightgray"
   | "beige"
   | "butter"
-  | "tealGreen"
-  | "lemon"
-  | "toffee"
-  | "lavender";
+  | "honeybutter"
+  | "brickbrown"
+  | "softblue"
+  | "mint"
+  | "deepgreen";
 
 type DotPattern = "AAAA" | "ABBA" | "ABBC";
 
 /* =========================================================
    색상 옵션
-   - 라이트그레이: 약간 더 밝게 (#E5E7EB)
+   - 버디: 기존 4색 유지
+   - 도트: 기존 4색 + 신규 5색
 ========================================================= */
 const buddyColorOptions: { key: BuddyColor; label: string; color: string }[] = [
   { key: "ivory", label: "아이보리", color: "#FDF8EE" },
-  { key: "lightgray", label: "라이트그레이", color: "#E5E7EB" }, // 밝게
+  { key: "lightgray", label: "라이트그레이", color: "#E5E7EB" },
   { key: "beige", label: "베이지", color: "#EBD9B4" },
   { key: "butter", label: "버터", color: "#FFE9A7" },
 ];
 
 const dotColorOptions: { key: DotColorKey; label: string; color: string }[] = [
   { key: "ivory", label: "아이보리", color: "#FDF8EE" },
-  { key: "lightgray", label: "라이트그레이", color: "#E5E7EB" }, // 밝게
+  { key: "lightgray", label: "라이트그레이", color: "#E5E7EB" },
   { key: "beige", label: "베이지", color: "#EBD9B4" },
   { key: "butter", label: "버터", color: "#FFE9A7" },
 
-  // 추가 4색
-  { key: "tealGreen", label: "틸그린", color: "#2AA39A" },
-  { key: "lemon", label: "레몬", color: "#FFE066" },
-  { key: "toffee", label: "토피", color: "#B07A4A" },
-  { key: "lavender", label: "라벤더", color: "#B9A7FF" },
+  { key: "honeybutter", label: "허니버터", color: "#F4D77A" },
+  { key: "brickbrown", label: "브릭브라운", color: "#8C5A3C" },
+  { key: "softblue", label: "소프트블루", color: "#C7DDF7" },
+  { key: "mint", label: "민트", color: "#BFE8D8" },
+  { key: "deepgreen", label: "딥그린", color: "#315B4C" },
 ];
 
 /* =========================================================
@@ -55,7 +57,7 @@ const dotPatternCells: Record<DotPattern, ("A" | "B" | "C")[]> = {
 };
 
 /* =========================================================
-   박스 계산 (기존 방식 유지)
+   박스 계산
 ========================================================= */
 function calcPacks(totalNeeded: number, packSizes: number[]) {
   const sorted = [...packSizes].sort((a, b) => b - a);
@@ -87,7 +89,7 @@ function calcPacks(totalNeeded: number, packSizes: number[]) {
 }
 
 /* =========================================================
-   UI 조각
+   UI 공용 컴포넌트
 ========================================================= */
 function ColorChipButton(props: {
   label: string;
@@ -163,14 +165,12 @@ function PatternButton(props: {
       ].join(" ")}
     >
       <div className="flex items-center justify-center">
-        {/* gap-0 + border로 4칸 붙게 */}
         <div className="grid grid-cols-2 gap-0 overflow-hidden rounded-lg border border-slate-300">
           {dotPatternCells[pattern].map((sym, i) => (
             <div
               key={i}
+              className="w-7 h-7 md:w-8 md:h-8"
               style={{
-                width: 28,
-                height: 28,
                 backgroundColor: getColor(sym),
                 border: "0.5px solid #9AA3AF",
               }}
@@ -191,24 +191,18 @@ function PatternButton(props: {
 export default function Page() {
   const [productType, setProductType] = useState<ProductType>("buddy");
 
-  // 공간
-  const [widthCm, setWidthCm] = useState<number>(400);  // 가로
-  const [heightCm, setHeightCm] = useState<number>(300); // 세로
+  const [widthCm, setWidthCm] = useState<number>(400);
+  const [heightCm, setHeightCm] = useState<number>(300);
 
-  // 버디
   const [buddyColor, setBuddyColor] = useState<BuddyColor>("ivory");
 
-  // 도트
   const [dotPattern, setDotPattern] = useState<DotPattern>("AAAA");
   const [dotColorA, setDotColorA] = useState<DotColorKey>("ivory");
   const [dotColorB, setDotColorB] = useState<DotColorKey>("butter");
   const [dotColorC, setDotColorC] = useState<DotColorKey>("beige");
 
-  // 성능 보호
   const maxPreviewTiles = 48;
-
-  // 윤곽선(요청: 더 얇게 + 더 어둡게)
-  const outlineColor = "#6B7280"; // 더 어둡게(회색)
+  const outlineColor = "#6B7280";
   const outlineThin = "0.5px";
 
   /* ---------------- 계산 ---------------- */
@@ -227,7 +221,6 @@ export default function Page() {
   const previewDotX = Math.min(dotX || 0, maxPreviewTiles);
   const previewDotY = Math.min(dotY || 0, maxPreviewTiles);
 
-  /* ---------------- 색상 맵 ---------------- */
   const dotColorMap: Record<DotColorKey, string> = useMemo(() => {
     const m = {} as Record<DotColorKey, string>;
     for (const c of dotColorOptions) m[c.key] = c.color;
@@ -247,15 +240,12 @@ export default function Page() {
       ? dotColorMap[dotColorB]
       : dotColorMap[dotColorC];
 
-  /* ---------------- 미리보기 타일 픽셀(모바일 고려) ---------------- */
   const buddyTilePx = 14;
   const dotTilePx = 8;
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
-      {/* =========================
-          상단 고정 미리보기 (요청: 맨 위, 항상 보이게)
-         ========================= */}
+      {/* 상단 고정 미리보기 */}
       <div className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto max-w-6xl px-4 py-3">
           <div className="flex items-start justify-between gap-3">
@@ -276,7 +266,6 @@ export default function Page() {
             </div>
           </div>
 
-          {/* 미리보기 */}
           <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-2">
             <div className="mb-2 flex items-center justify-between">
               <div className="text-sm font-bold text-slate-800">미리보기</div>
@@ -286,7 +275,6 @@ export default function Page() {
             </div>
 
             <div className="max-h-[220px] overflow-auto rounded-lg bg-white p-2">
-              {/* 버디 */}
               {productType === "buddy" && (
                 <div
                   className="inline-grid"
@@ -308,7 +296,6 @@ export default function Page() {
                 </div>
               )}
 
-              {/* 도트 */}
               {productType === "dot" && (
                 <div
                   className="inline-grid"
@@ -341,11 +328,9 @@ export default function Page() {
         </div>
       </div>
 
-      {/* =========================
-          옵션 + 결과
-         ========================= */}
+      {/* 옵션 + 결과 */}
       <div className="mx-auto max-w-6xl space-y-5 px-4 py-5">
-        {/* 1) 타일 종류 */}
+        {/* 1. 타일 종류 */}
         <section className="rounded-2xl border border-slate-200 bg-white p-4">
           <div className="mb-2 text-sm font-black text-slate-800">1. 타일 종류</div>
           <div className="grid grid-cols-2 gap-2">
@@ -375,13 +360,13 @@ export default function Page() {
             >
               <div>도트 데크타일</div>
               <div className="mt-1 text-[11px] font-medium text-slate-500">
-                10×10cm · 8색 · AAAA/ABBA/ABBC
+                10×10cm · 9색 · AAAA/ABBA/ABBC
               </div>
             </button>
           </div>
         </section>
 
-        {/* 2) 공간 입력 */}
+        {/* 2. 공간 입력 */}
         <section className="rounded-2xl border border-slate-200 bg-white p-4">
           <div className="mb-2 text-sm font-black text-slate-800">2. 공간 크기 (cm)</div>
           <div className="grid grid-cols-2 gap-2">
@@ -409,11 +394,10 @@ export default function Page() {
           </div>
         </section>
 
-        {/* 3) 옵션 */}
+        {/* 3. 옵션 */}
         <section className="rounded-2xl border border-slate-200 bg-white p-4">
           <div className="mb-3 text-sm font-black text-slate-800">3. 옵션 선택</div>
 
-          {/* 버디 색상 */}
           {productType === "buddy" && (
             <div>
               <div className="mb-2 text-xs font-bold text-slate-600">버디 색상</div>
@@ -432,10 +416,8 @@ export default function Page() {
             </div>
           )}
 
-          {/* 도트: 패턴 + A/B/C */}
           {productType === "dot" && (
             <div className="space-y-4">
-              {/* 패턴 */}
               <div>
                 <div className="mb-2 text-xs font-bold text-slate-600">도트 패턴</div>
                 <div className="grid grid-cols-3 gap-2">
@@ -451,11 +433,10 @@ export default function Page() {
                 </div>
               </div>
 
-              {/* A/B/C 색상 */}
               <div className="space-y-3">
                 <div>
                   <div className="mb-2 text-xs font-black text-slate-700">A 색상</div>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-5">
                     {dotColorOptions.map((c) => (
                       <ColorChipButton
                         key={"A-" + c.key}
@@ -472,7 +453,7 @@ export default function Page() {
                 {dotPattern !== "AAAA" && (
                   <div>
                     <div className="mb-2 text-xs font-black text-slate-700">B 색상</div>
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-5">
                       {dotColorOptions.map((c) => (
                         <ColorChipButton
                           key={"B-" + c.key}
@@ -490,7 +471,7 @@ export default function Page() {
                 {dotPattern === "ABBC" && (
                   <div>
                     <div className="mb-2 text-xs font-black text-slate-700">C 색상</div>
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-5">
                       {dotColorOptions.map((c) => (
                         <ColorChipButton
                           key={"C-" + c.key}
@@ -509,7 +490,7 @@ export default function Page() {
           )}
         </section>
 
-        {/* 4) 계산 결과 */}
+        {/* 4. 계산 결과 */}
         <section className="rounded-2xl border border-slate-200 bg-white p-4">
           <div className="mb-2 text-sm font-black text-slate-800">4. 수량 & 박스 계산</div>
 
@@ -590,7 +571,6 @@ export default function Page() {
           )}
         </section>
 
-        {/* 하단 여백 */}
         <div className="h-4" />
       </div>
     </div>
